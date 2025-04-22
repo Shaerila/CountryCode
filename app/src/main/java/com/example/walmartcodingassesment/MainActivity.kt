@@ -1,6 +1,7 @@
 package com.example.walmartcodingassesment
 
 import android.os.Bundle
+import android.widget.SearchView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -25,25 +26,53 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.widget.addTextChangedListener
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.walmartcodingassesment.domain.model.CountryItem
+import com.example.walmartcodingassesment.ui.adapter.CountryAdapter
 import com.example.walmartcodingassesment.ui.theme.WalmartCodingAssesmentTheme
 import com.example.walmartcodingassesment.ui.viewmodel.CountryViewModel
+import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private lateinit var adapter: CountryAdapter
+    private val viewModel: CountryViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
+        setContentView(R.layout.country_layout)
 
-            WalmartCodingAssesmentTheme {
+        adapter = CountryAdapter()
 
-                    CountryListScreen()
+        val recyclerView = findViewById<RecyclerView>(R.id.countryRecycleView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+
+        recyclerView.adapter = adapter
+
+
+        // Observes the countries from the ViewModel
+        lifecycleScope.launch {
+            viewModel.countries.collectLatest {
+                adapter.submitCountryList(it)
             }
         }
+
+        val searchView = findViewById<TextInputEditText>(R.id.countrySearchBar)
+        searchView.addTextChangedListener { adapter.filter.filter(it.toString()) }
+
     }
 }
+
+
 @Composable
 fun CountryListScreen(
     viewModel: CountryViewModel = hiltViewModel()
@@ -56,7 +85,9 @@ fun CountryListScreen(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
         items(countryList) { country ->
             CountryCard(country)
@@ -75,7 +106,7 @@ fun CountryCard(country: CountryItem) {
             Text(text = "${country.region}", style = MaterialTheme.typography.bodySmall)
             Text(text = "     ${country.code}", style = MaterialTheme.typography.bodySmall)
         }
-        Row(modifier = Modifier.padding(16.dp)){
+        Row(modifier = Modifier.padding(16.dp)) {
             Text(text = "${country.capital}", style = MaterialTheme.typography.bodyMedium)
         }
     }
